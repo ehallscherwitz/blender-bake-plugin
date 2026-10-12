@@ -160,6 +160,7 @@ Panel copy: one line on the operator. Options stay on the panel (object checklis
 - **Three.js, when it exists, is a second operator.** This addon only has to guarantee a new UV, a saved Combined PNG, and a known node setup. Export (glTF, unlit or emissive so the engine does not relight, apply scale) is separate.
 - **Unsaved .blend:** no directory beside the file. Warning plus block until they save or pick a folder.
 - **Testing warning** on every bake start: save first; plugin is in testing; results may not be perfect.
+- **Addon version** lives in `lighting_bake/version.py` and in the sidebar panel header. It is 0.4.2. The bake confirmation names Individual (“on their own maps”) or One map (“onto one map”). `bl_info["version"]` in `__init__.py` must be the same tuple written out literally, such as `(0, 4, 2)`. Blender skips the addon if that value is a variable.
 - Target Blender when packaging later: check the user’s installed version before writing `bl_info` / extension manifest. Do not guess now.
 - Addon layout when implementation starts (not created yet): package folder, `__init__.py` with `bl_info`, panel, properties, one bake operator. Short comments per section. No README edits unless the user asks.
 

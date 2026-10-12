@@ -2,11 +2,13 @@ import textwrap
 
 import bpy
 
+from .bake import bake_prepared
 from .properties import sync_object_list
+from .setup import setup_bake_targets
 from .validate import TESTING_WARNING, validate_bake
 
 # Operators for the checklist and the bake button.
-# The bake operator validates and stops. A later phase performs the bake.
+# The bake operator validates, creates UV maps and images, bakes, then saves PNGs.
 
 
 def _wrap(text):
@@ -32,16 +34,49 @@ class LIGHTINGBAKE_OT_bake(bpy.types.Operator):
     ready_text: bpy.props.StringProperty(default="", maxlen=4096, options={'HIDDEN', 'SKIP_SAVE'})
 
     def invoke(self, context, event):
-        self._apply(validate_bake(context))
+        self._apply(context, validate_bake(context))
         return context.window_manager.invoke_props_dialog(self, width=520)
 
     def execute(self, context):
         if not self.validated:
-            self._apply(validate_bake(context))
+            self._apply(context, validate_bake(context))
         self._report()
         if self.is_blocked:
             return {'CANCELLED'}
-        return {'FINISHED'}
+
+        check = validate_bake(context)
+        if check.blocked:
+            self.report({'ERROR'}, " ".join(check.blocking))
+            return {'CANCELLED'}
+
+        window_manager = context.window_manager
+        window_manager.progress_begin(0, 100)
+        baked = None
+        try:
+            window_manager.progress_update(5)
+            result = setup_bake_targets(context, check.targets)
+            for warning in result.warnings:
+                self.report({'WARNING'}, warning)
+            for message in result.messages:
+                self.report({'INFO'}, message)
+            if not result.ok:
+                return {'CANCELLED'}
+
+            window_manager.progress_update(15)
+            baked = bake_prepared(context, result.jobs, self.report)
+            for warning in baked.warnings:
+                self.report({'WARNING'}, warning)
+            for message in baked.messages:
+                self.report({'INFO'}, message)
+            if not baked.ok:
+                return {'CANCELLED'}
+            return {'FINISHED'}
+        finally:
+            window_manager.progress_end()
+            if not getattr(baked, "pending", False):
+                workspace = getattr(context, "workspace", None)
+                if workspace is not None:
+                    workspace.status_text_set(None)
 
     def draw(self, context):
         del context
@@ -74,7 +109,7 @@ class LIGHTINGBAKE_OT_bake(bpy.types.Operator):
             for line in _wrap(self.ready_text):
                 layout.label(text=line)
 
-    def _apply(self, check):
+    def _apply(self, context, check):
         self.validated = True
         self.is_blocked = check.blocked
         self.testing_text = TESTING_WARNING
@@ -85,8 +120,13 @@ class LIGHTINGBAKE_OT_bake(bpy.types.Operator):
             self.ready_text = ""
             return
         names = ", ".join(obj.name for obj in check.targets)
-        noun = "mesh" if len(check.targets) == 1 else "meshes"
-        self.ready_text = f"Ready to bake {len(check.targets)} {noun}: {names}. Baking is not implemented yet."
+        count = len(check.targets)
+        noun = "mesh" if count == 1 else "meshes"
+        if context.scene.lighting_bake.bake_mode == 'ONE_MAP':
+            where = "onto one map"
+        else:
+            where = "on its own map" if count == 1 else "on their own maps"
+        self.ready_text = f"Will bake {count} {noun} {where}: {names}, then save PNGs."
 
     def _report(self):
         self.report({'WARNING'}, self.testing_text)

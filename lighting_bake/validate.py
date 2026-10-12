@@ -63,7 +63,7 @@ def validate_bake(context):
     if not check.blocked:
         _check_lighting(scene, context.view_layer, check)
         _warn_shared_meshes(check)
-        _warn_shared_materials(check)
+        _warn_shared_materials(check, scene.lighting_bake.bake_mode == 'INDIVIDUAL')
         _warn_zero_area(check)
 
     return check
@@ -192,12 +192,13 @@ def _warn_shared_meshes(check):
         ]
         shared_with = ", ".join(others) if others else "another datablock"
         check.warnings.append(
-            f"{obj.name} shares mesh data with {shared_with}. A later step will make it single-user before unwrapping."
+            f"{obj.name} shares mesh data with {shared_with}. This run will make it single-user before unwrapping."
         )
 
 
-def _warn_shared_materials(check):
+def _warn_shared_materials(check, individual):
     seen = set()
+    target_names = {obj.name for obj in check.targets}
     for obj in check.targets:
         for slot in obj.material_slots:
             material = slot.material
@@ -206,10 +207,18 @@ def _warn_shared_materials(check):
             users = _mesh_users(material)
             if len(users) <= 1:
                 continue
+            outsiders = [name for name in users if name not in target_names]
+            if not individual and not outsiders:
+                continue
             seen.add(material.as_pointer())
-            check.warnings.append(
-                f"Material {material.name} is on {', '.join(users)}. A later step will give the baked meshes their own copy."
-            )
+            if individual:
+                check.warnings.append(
+                    f"Material {material.name} is on {', '.join(users)}. This run will give each baked mesh its own copy."
+                )
+            else:
+                check.warnings.append(
+                    f"Material {material.name} is on {', '.join(users)}. This run will copy it for the baked meshes so the others keep the original."
+                )
 
 
 def _mesh_users(material):

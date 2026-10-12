@@ -1,6 +1,7 @@
 import bpy
 from bpy.app.handlers import persistent
 
+from .bake import clear_bake_session
 from .operators import (
     LIGHTINGBAKE_OT_bake,
     LIGHTINGBAKE_OT_objects_all,
@@ -13,7 +14,7 @@ from .properties import LightingBakeObjectItem, LightingBakeSettings, sync_objec
 bl_info = {
     "name": "Lighting Bake",
     "author": "Lighting Bake",
-    "version": (0, 1, 0),
+    "version": (0, 4, 2),
     "blender": (5, 1, 0),
     "location": "View3D > Sidebar > Lighting Bake",
     "description": "Bake a combined lighting look onto a new UV map and save PNG textures",
@@ -68,6 +69,7 @@ def register():
 
 
 def unregister():
+    clear_bake_session()
     if _on_depsgraph_update in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.remove(_on_depsgraph_update)
     if _on_load_post in bpy.app.handlers.load_post:

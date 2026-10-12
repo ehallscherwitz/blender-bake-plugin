@@ -1,6 +1,7 @@
 import bpy
 
 from .properties import object_list_is_current, sync_object_list
+from .version import version_string
 
 # Sidebar panel and the mesh checklist.
 
@@ -31,7 +32,7 @@ class LIGHTINGBAKE_UL_objects(bpy.types.UIList):
 
 
 class LIGHTINGBAKE_PT_main(bpy.types.Panel):
-    bl_label = "Lighting Bake"
+    bl_label = f"Lighting Bake {version_string()}"
     bl_idname = "LIGHTINGBAKE_PT_main"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
