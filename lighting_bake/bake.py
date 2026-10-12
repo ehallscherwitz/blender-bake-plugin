@@ -110,7 +110,7 @@ class _BakeSession:
             finally:
                 self.launching = False
         except RuntimeError as exc:
-            self.warnings.append(f"{job.label} failed and was skipped: {exc}")
+            self.warnings.append(f"{job.label} failed and was skipped: {_one_line(exc)}")
             self.index += 1
             return 'sync'
 
@@ -118,6 +118,7 @@ class _BakeSession:
             return 'async'
 
         if 'CANCELLED' in result:
+            # A failed bake is skipped. The next mesh still runs.
             self.warnings.append(f"{job.label} failed and was skipped: bake was cancelled")
             self.index += 1
             return 'sync'
@@ -132,7 +133,7 @@ class _BakeSession:
             path = _save_png(job.image, self.folder, context.scene)
             _connect_preview(job)
         except RuntimeError as exc:
-            self.warnings.append(f"{job.label} failed and was skipped: {exc}")
+            self.warnings.append(f"{job.label} failed and was skipped: {_one_line(exc)}")
             return
         self.saved.append(path)
         done_message = f"Baked {job.label} ({position})"
@@ -157,6 +158,7 @@ class _BakeSession:
         self.job_settled = True
         context = bpy.context
         if kind == 'cancel':
+            # Esc stops the queue. A per-object error does not.
             job = self.jobs[self.index]
             self.warnings.append(f"{job.label} was cancelled. Remaining meshes were not baked.")
             self._summarize()
@@ -252,6 +254,13 @@ def _start_bake_job(context, job, margin_px):
             save_mode='INTERNAL',
             uv_layer=job.uv_name,
         )
+
+
+def _one_line(exc):
+    text = " ".join(str(exc).split())
+    if text.startswith("Error: "):
+        text = text[len("Error: "):]
+    return text or "the bake failed"
 
 
 def _tell(report, level, text):

@@ -135,6 +135,9 @@ def _classify_mesh(obj, view_layer, check):
     if view_layer.objects.get(obj.name) != obj:
         check.skipped.append(f"{obj.name} is not in the current view layer, so it was skipped.")
         return
+    if not obj.visible_get():
+        check.skipped.append(f"{obj.name} is hidden in the viewport, so it was skipped.")
+        return
     check.targets.append(obj)
 
 

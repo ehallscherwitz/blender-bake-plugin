@@ -14,7 +14,7 @@ from .properties import LightingBakeObjectItem, LightingBakeSettings, sync_objec
 bl_info = {
     "name": "Lighting Bake",
     "author": "Lighting Bake",
-    "version": (0, 5, 0),
+    "version": (0, 6, 0),
     "blender": (5, 1, 0),
     "location": "View3D > Sidebar > Lighting Bake",
     "description": "Bake a combined lighting look onto a new UV map and save PNG textures",

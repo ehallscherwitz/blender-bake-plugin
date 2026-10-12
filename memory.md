@@ -77,7 +77,7 @@ Warnings are obvious (popup or a loud report the user cannot miss). Skips do not
 
 - Not in Object Mode: warn, switch to Object Mode, then continue.
 - No lights and no world contribution: warn that the bake may come out black.
-- Object is hidden from render, or excluded from the view layer: warn and skip.
+- Object is hidden from render, hidden in the viewport, or excluded from the view layer: warn and skip. Do not add a UV or image to a mesh that was skipped.
 - Mesh data is shared with another object (`data.users > 1`): make the mesh single-user before adding or unwrapping the bake UV, and report that. An unwrap on linked duplicates would change every user.
 - A material is shared and we duplicate it so images stay per object (or so outsiders are not affected): report that.
 
@@ -160,7 +160,7 @@ Panel copy: one line on the operator. Options stay on the panel (object checklis
 - **Three.js, when it exists, is a second operator.** This addon only has to guarantee a new UV, a saved Combined PNG, and a known node setup. Export (glTF, unlit or emissive so the engine does not relight, apply scale) is separate.
 - **Unsaved .blend:** no directory beside the file. Warning plus block until they save or pick a folder.
 - **Testing warning** on every bake start: save first; plugin is in testing; results may not be perfect.
-- **Addon version** lives in `lighting_bake/version.py` and in the sidebar panel header. It is 0.5.0. One-map packs by world surface area, keeps an unchecked mesh off the image, and leaves a shared material’s other users on the original shader. `bl_info["version"]` in `__init__.py` must be the same tuple written out literally, such as `(0, 5, 0)`. Blender skips the addon if that value is a variable.
+- **Addon version** lives in `lighting_bake/version.py` and in the sidebar panel header. It is 0.6.0. A bad mesh is skipped with a message and the rest still bake. Esc cancels the mesh in progress and does not start the ones after it. `bl_info["version"]` in `__init__.py` must be the same tuple written out literally, such as `(0, 6, 0)`. Blender skips the addon if that value is a variable.
 - Target Blender when packaging later: check the user’s installed version before writing `bl_info` / extension manifest. Do not guess now.
 - Addon layout when implementation starts (not created yet): package folder, `__init__.py` with `bl_info`, panel, properties, one bake operator. Short comments per section. No README edits unless the user asks.
 

@@ -63,7 +63,10 @@ def setup_bake_targets(context, targets):
 
         if individual:
             for obj in targets:
-                _setup_one_object(context, obj, resolution, method, preview, margin_px, result)
+                try:
+                    _setup_one_object(context, obj, resolution, method, preview, margin_px, result)
+                except Exception as exc:
+                    result.warnings.append(f"{obj.name} failed and was skipped: {_one_line(exc)}")
         else:
             _setup_one_map(context, targets, settings, resolution, method, preview, margin_px, result)
     finally:
@@ -91,26 +94,35 @@ def _setup_one_map(context, targets, settings, resolution, method, preview, marg
     uv_name = base_uv if method == 'KEEP' else _unique_name(base_uv, _uv_names(targets))
     image = _new_image(f"{group_name}LightingBakedTexture", resolution, margin_px, uv_name)
 
+    prepared = []
     for obj in targets:
-        _ensure_uv_layer(obj.data, uv_name)
-        if method == 'KEEP':
+        try:
+            _ensure_uv_layer(obj.data, uv_name)
+            if method != 'KEEP':
+                _unwrap_object(context, obj, method)
+        except Exception as exc:
+            result.warnings.append(f"{obj.name} failed and was skipped: {_one_line(exc)}")
             continue
-        try:
-            _unwrap_object(context, obj, method)
-        except RuntimeError as exc:
-            result.warnings.append(f"{obj.name} could not be unwrapped: {exc}")
+        prepared.append(obj)
 
-    if method != 'KEEP' and len(targets) > 1:
+    if method != 'KEEP' and len(prepared) > 1:
         try:
-            _pack_group(context, targets, uv_name)
-        except RuntimeError as exc:
-            result.warnings.append(f"Could not pack the shared UV map, so islands may overlap: {exc}")
+            _pack_group(context, prepared, uv_name)
+        except Exception as exc:
+            result.warnings.append(f"Could not pack the shared UV map, so islands may overlap: {_one_line(exc)}")
 
-    for obj in targets:
-        _add_object_nodes(obj, image, uv_name, preview)
+    included = []
+    for obj in prepared:
+        try:
+            _add_object_nodes(obj, image, uv_name, preview)
+        except Exception as exc:
+            result.warnings.append(f"{obj.name} failed and was skipped: {_one_line(exc)}")
+            continue
+        included.append(obj)
         result.completed += 1
         result.messages.append(f"{obj.name}: UV {uv_name}, image {image.name}.")
-    result.jobs.append(BakeJob(targets, image, uv_name, group_name))
+    if included:
+        result.jobs.append(BakeJob(included, image, uv_name, group_name))
 
 
 def _write_object_map(context, obj, uv_name, image, method, preview, result):
@@ -119,11 +131,18 @@ def _write_object_map(context, obj, uv_name, image, method, preview, result):
         try:
             _unwrap_object(context, obj, method)
         except RuntimeError as exc:
-            result.warnings.append(f"{obj.name} could not be unwrapped: {exc}")
+            result.warnings.append(f"{obj.name} could not be unwrapped: {_one_line(exc)}")
     _add_object_nodes(obj, image, uv_name, preview)
     result.completed += 1
     result.messages.append(f"{obj.name}: UV {uv_name}, image {image.name}.")
     result.jobs.append(BakeJob((obj,), image, uv_name, obj.name))
+
+
+def _one_line(exc):
+    text = " ".join(str(exc).split())
+    if text.startswith("Error: "):
+        text = text[len("Error: "):]
+    return text or "the bake failed"
 
 
 def _uv_name_for_object(obj, base_name, method):
