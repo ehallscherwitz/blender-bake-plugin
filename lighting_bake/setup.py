@@ -1,5 +1,6 @@
 import math
 
+import bmesh
 import bpy
 
 # Create bake UV maps, blank images, and image nodes. Does not bake.
@@ -258,6 +259,7 @@ def _unwrap_object(context, obj, method):
 
 
 def _pack_group(context, objects, uv_name):
+    scale_factors = _object_scale_factors(objects)
     for obj in objects:
         obj.data.uv_layers[uv_name].active = True
     _set_selection(context, objects)
@@ -267,6 +269,8 @@ def _pack_group(context, objects, uv_name):
     try:
         _call(context, bpy.ops.mesh.select_all, action='SELECT')
         _call(context, bpy.ops.uv.average_islands_scale)
+        # average_islands_scale uses the mesh's own size and ignores object scale.
+        _apply_uv_scale_factors(objects, uv_name, scale_factors)
         _call(
             context,
             bpy.ops.uv.pack_islands,
@@ -280,6 +284,45 @@ def _pack_group(context, objects, uv_name):
         context.scene.tool_settings.use_uv_select_sync = previous_sync
         if context.mode != 'OBJECT':
             bpy.ops.object.mode_set(mode='OBJECT')
+
+
+def _object_scale_factors(objects):
+    factors = {}
+    for obj in objects:
+        local_area = _surface_area(obj, world=False)
+        if local_area <= 1e-12:
+            continue
+        factor = math.sqrt(_surface_area(obj, world=True) / local_area)
+        if abs(factor - 1.0) >= 1e-5:
+            factors[obj.as_pointer()] = factor
+    return factors
+
+
+def _apply_uv_scale_factors(objects, uv_name, factors):
+    if not factors:
+        return
+    for obj in objects:
+        factor = factors.get(obj.as_pointer())
+        if factor is None:
+            continue
+        bm = bmesh.from_edit_mesh(obj.data)
+        layer = bm.loops.layers.uv.get(uv_name)
+        if layer is None:
+            continue
+        for face in bm.faces:
+            for loop in face.loops:
+                loop[layer].uv = loop[layer].uv * factor
+        bmesh.update_edit_mesh(obj.data)
+
+
+def _surface_area(obj, world):
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    if world:
+        bm.transform(obj.matrix_world)
+    area = sum(face.calc_area() for face in bm.faces)
+    bm.free()
+    return area
 
 
 def _add_object_nodes(obj, image, uv_name, preview):

@@ -155,12 +155,12 @@ Panel copy: one line on the operator. Options stay on the panel (object checklis
 - **Group name typo in the old README** (`grougName`) is wrong. Use `groupName` from the panel field.
 - **“Original materials left untouched”** means do not delete or rewire existing shader nodes. Preview mode is allowed to move the Material Output link to the new Principled. Unconnected mode does not.
 - **Do not follow the Render bake type.** Combined is locked. Sampling still comes from Render.
-- **Texel density** on one-map bakes matters as much as the unwrap operator. Equal pack of a crate and a building looks wrong. Scale by area, then pack.
+- **Texel density** on one-map bakes matters as much as the unwrap operator. Equal pack of a crate and a building looks wrong. Scale by world surface area, then pack. Object scale counts: a mesh scaled up in the viewport is large even when its vertex positions are not.
 - **Lightmap Pack** is the fallback when Smart UV Project looks bad. Keep-existing is the other fallback. Do not auto-merge textures to “fix” a bad unwrap.
 - **Three.js, when it exists, is a second operator.** This addon only has to guarantee a new UV, a saved Combined PNG, and a known node setup. Export (glTF, unlit or emissive so the engine does not relight, apply scale) is separate.
 - **Unsaved .blend:** no directory beside the file. Warning plus block until they save or pick a folder.
 - **Testing warning** on every bake start: save first; plugin is in testing; results may not be perfect.
-- **Addon version** lives in `lighting_bake/version.py` and in the sidebar panel header. It is 0.4.2. The bake confirmation names Individual (“on their own maps”) or One map (“onto one map”). `bl_info["version"]` in `__init__.py` must be the same tuple written out literally, such as `(0, 4, 2)`. Blender skips the addon if that value is a variable.
+- **Addon version** lives in `lighting_bake/version.py` and in the sidebar panel header. It is 0.5.0. One-map packs by world surface area, keeps an unchecked mesh off the image, and leaves a shared material’s other users on the original shader. `bl_info["version"]` in `__init__.py` must be the same tuple written out literally, such as `(0, 5, 0)`. Blender skips the addon if that value is a variable.
 - Target Blender when packaging later: check the user’s installed version before writing `bl_info` / extension manifest. Do not guess now.
 - Addon layout when implementation starts (not created yet): package folder, `__init__.py` with `bl_info`, panel, properties, one bake operator. Short comments per section. No README edits unless the user asks.
 
